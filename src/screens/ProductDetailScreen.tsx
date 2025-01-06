@@ -12,7 +12,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { db, saveDocument } from '../../firebase-config';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs,addDoc } from 'firebase/firestore';
 import { useAuthContext } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -94,19 +94,82 @@ const ProductDetailScreen = ({ route, navigation }: { route: any; navigation: an
     }
   };
 
-  const handleBuyNow = () => {
+
+
+  const handleBuyNow = async () => {
     if (!user) {
-      Alert.alert('Error', 'You need to log in to contact the seller.');
+      // If the user is not logged in, navigate to the login screen
+      navigation.navigate('Login');
       return;
     }
-
-    navigation.navigate('Chat', {
-      conversationId: `${user.email}_${product?.sellerId}_${productId}`,
-      recipient: product?.sellerId,
-      productId,
-    });
+  
+    // Ensure that the product and its sellerId are available
+    if (!product?.sellerId || !productId) {
+      return; // Do nothing if the product or sellerId is missing
+    }
+  
+    // Generate a unique conversation ID based on buyer and seller details
+    const conversationId = `${user.email}_${product.sellerId}_${productId}`;
+    
+    try {
+      // Query the 'users' collection to find the seller by userId
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('userId', '==', product.sellerId) // Find user by sellerId
+      );
+  
+      const usersSnapshot = await getDocs(usersQuery);
+      let sellerEmail = '';
+      
+      if (!usersSnapshot.empty) {
+        // Get the seller email from the first matching user document
+        const sellerDoc = usersSnapshot.docs[0]; 
+        sellerEmail = sellerDoc.data().email; // Assume email field is available
+      } else {
+        return; // Return if no seller details are found
+      }
+  
+      // Query the 'messages' collection to check if a conversation already exists
+      const messagesQuery = query(
+        collection(db, 'messages'),
+        where('buyer_id', '==', user.email),
+        where('seller_id', '==', sellerEmail),
+        where('productId', '==', productId)
+      );
+  
+      const messagesSnapshot = await getDocs(messagesQuery);
+  
+      // If a message conversation already exists, navigate to the existing chat
+      if (!messagesSnapshot.empty) {
+        const existingConversation = messagesSnapshot.docs[0].data();
+        navigation.navigate('Chat', {
+          conversationId: existingConversation.conversationId,
+          recipient: sellerEmail, // Use the seller's email as recipient
+          productId,
+        });
+        return; // Exit the function as we are navigating to the existing chat
+      }
+  
+      // Add the new message document to the Firestore messages collection
+      await addDoc(collection(db, 'messages'), {
+        conversationId,
+        buyer_id: user.email, // Buyer is the current user
+        seller_id: sellerEmail, // Seller email from the 'users' collection
+        lastMessage: 'Hi, I am interested in your product!', // Initial message (can be customized)
+        productId, // The product involved in the conversation
+        createdAt: new Date(), // Timestamp when the message is created
+      });
+  
+      // Navigate to the new Chat screen with the conversationId and seller details
+      navigation.navigate('Chat', {
+        conversationId,
+        recipient: sellerEmail, // Use the seller's email as recipient
+        productId,
+      });
+    } catch (error) {
+      console.error('Error creating message conversation:', error);
+    }
   };
-
   const handleReport = () => {
     if (!user) {
       Alert.alert('Error', 'You need to log in to report an item.');

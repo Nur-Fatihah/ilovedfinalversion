@@ -4,19 +4,20 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
   SafeAreaView,
   Image,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { collection, query, onSnapshot } from 'firebase/firestore';
+import tw from 'twrnc';
+import { collection, query, onSnapshot, doc, getDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebase-config';
 import { useAuthContext } from '../context/AuthContext';
 
 interface Conversation {
   id: string;
-  participants: string[];
+  seller_id: string;
+  buyer_id: string;
   lastMessage: string;
 }
 
@@ -25,27 +26,66 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   const fetchConversations = async () => {
     if (!user?.email) return;
-
+  
     setLoading(true);
+  
     const conversationsQuery = query(collection(db, 'messages'));
-    const unsubscribe = onSnapshot(conversationsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(conversationsQuery, async (snapshot) => {
       const fetchedConversations = snapshot.docs.map((doc) => ({
         id: doc.id,
-        participants: doc.data().participants || [],
+        seller_id: doc.data().seller_id,
+        buyer_id: doc.data().buyer_id,
         lastMessage: doc.data().lastMessage || 'No messages yet',
       }));
-
-      const userConversations = fetchedConversations.filter((conv) =>
-        conv.participants.includes(user.email)
+  
+      // Filter conversations where the user is either the seller or the buyer
+      const userConversations = fetchedConversations.filter(
+        (conv) => conv.seller_id === user.email || conv.buyer_id === user.email
       );
-
+  
       setConversations(userConversations);
+  
+      // Fetch names for participants in these conversations
+      const participantIds = Array.from(
+        new Set(
+          userConversations.flatMap((conv) => [conv.seller_id, conv.buyer_id])
+        )
+      );
+  
+      // Debugging: Log participant IDs to ensure they are correct
+      console.log('Participant IDs:', participantIds);
+
+      // Fetch only relevant users using `where` clause
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('email', 'in', participantIds)  // Make sure you're matching the correct field (like 'email' or 'userId')
+      );
+  
+      const usersSnapshot = await getDocs(usersQuery);
+      const userMap: Record<string, string> = {};
+      console.log('User Snapshot:', usersSnapshot);
+      usersSnapshot.forEach((userDoc) => {
+        const userData = userDoc.data();
+        console.log('Fetched user data:', userData); // Log to check structure
+        if (userData.email && userData.name) { // Ensure you're using the correct field names
+          userMap[userData.email] = userData.name;  // Map by email or userId based on what matches the message fields
+        }
+      });
+  
+      // Update userNames with the map of user emails to names
+      const nameMap: Record<string, string> = {};
+      participantIds.forEach((id) => {
+        nameMap[id] = userMap[id] || 'Unknown User';
+      });
+  
+      setUserNames(nameMap);
       setLoading(false);
     });
-
+  
     return unsubscribe;
   };
 
@@ -54,13 +94,15 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   }, [user]);
 
   const renderConversation = ({ item }: { item: Conversation }) => {
-    const otherParticipant = item.participants.find(
-      (participant) => participant !== user?.email
-    );
+    // Determine the other participant
+    const otherParticipant =
+      item.seller_id === user?.email ? item.buyer_id : item.seller_id;
+
+    const otherParticipantName = userNames[otherParticipant] || 'Fetching...';
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={tw`flex-row bg-white rounded-lg p-4 mb-3 shadow-md items-center`}
         onPress={() =>
           navigation.navigate('Chat', {
             conversationId: item.id,
@@ -70,26 +112,31 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       >
         <Image
           source={{ uri: 'https://via.placeholder.com/50' }}
-          style={styles.avatar}
+          style={tw`w-12 h-12 rounded-full mr-4`}
         />
-        <View style={styles.cardContent}>
-          <Text style={styles.participant}>{otherParticipant || 'Unknown'}</Text>
-          <Text style={styles.lastMessage}>{item.lastMessage}</Text>
+        <View style={tw`flex-1`}>
+          <Text style={tw`text-base font-bold text-gray-800`}>
+            {otherParticipantName}
+          </Text>
+          <Text style={tw`text-sm text-gray-500 mt-1`}>{item.lastMessage}</Text>
         </View>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <View style={styles.header}>
-        <Image source={require('../../assets/iLovedLogo.png')} style={styles.logo} />
-        <Text style={styles.headerText}>Messages</Text>
+    <SafeAreaView style={tw`flex-1 bg-gray-100`}>
+      <View style={tw`bg-pink-100 p-5 items-center rounded-b-2xl shadow-md`}>
+        <Image
+          source={require('../../assets/iLovedLogo.png')}
+          style={tw`w-15 h-15 mb-2`}
+        />
+        <Text style={tw`text-lg font-bold text-pink-700`}>Messages</Text>
       </View>
 
-      <View style={styles.container}>
+      <View style={tw`flex-1 px-3 pt-3`}>
         {loading ? (
-          <ActivityIndicator size="large" color="#c2185b" style={styles.loader} />
+          <ActivityIndicator size="large" color="#c2185b" style={tw`mt-5`} />
         ) : (
           <FlatList
             data={conversations}
@@ -98,9 +145,11 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={fetchConversations} />
             }
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={tw`pb-5`}
             ListEmptyComponent={
-              <Text style={styles.emptyMessage}>No conversations available.</Text>
+              <Text style={tw`text-center text-base text-gray-500 mt-5`}>
+                No conversations available.
+              </Text>
             }
           />
         )}
@@ -108,44 +157,5 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f9f9f9' },
-  header: {
-    backgroundColor: '#ffeef2',
-    padding: 20,
-    alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  logo: { width: 60, height: 60, marginBottom: 10 },
-  headerText: { fontSize: 20, fontWeight: 'bold', color: '#c2185b' },
-  container: { flex: 1, paddingHorizontal: 10, paddingTop: 10 },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  avatar: { width: 50, height: 50, borderRadius: 25, marginRight: 15 },
-  cardContent: { flex: 1 },
-  participant: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  lastMessage: { fontSize: 14, color: '#777', marginTop: 5 },
-  listContent: { paddingBottom: 20 },
-  loader: { marginTop: 20 },
-  emptyMessage: { textAlign: 'center', fontSize: 16, color: '#888', marginTop: 20 },
-});
 
 export default MessageScreen;
