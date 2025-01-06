@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow access only for authenticated users
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Wishlist Collection: Only allow users to access their own wishlist items
+    match /wishlist/{document} {
+      allow read, write: if request.auth != null && request.auth.token.email == resource.data.userId;
+    }
+
+    // Products Collection: Allow authenticated users to read products
+    match /products/{document} {
+      allow read: if request.auth != null;
+      // Allow sellers to write or modify their products
+      allow write: if request.auth != null && request.auth.token.email == resource.data.sellerId;
+    }
+
+    // Messages Collection: Allow participants of a conversation to read/write messages
+    match /messages/{document} {
+      allow read, write: if request.auth != null && request.auth.token.email in resource.data.metadata.participants;
+    }
+
+    // Subcollection for messages: Restrict access to only the participants
+    match /messages/{document}/messages/{subdocument} {
+      allow read, write: if request.auth != null && request.auth.token.email in resource.parent.data.metadata.participants;
+    }
+
+    // Users Collection: Allow users to update their profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

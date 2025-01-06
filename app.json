@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "iloved",
+    "slug": "iloved",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.iloved",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires access to the camera to allow users to try on products virtually."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.yourcompany.iloved",
+      "permissions": [
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "iloved",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "locales": {
+      "en": "./locales/en.json"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "f5e0f9de-ea7c-411c-ac64-bee9bfd7af92"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f5e0f9de-ea7c-411c-ac64-bee9bfd7af92"
+    }
+  }
+}

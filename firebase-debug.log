@@ -1,0 +1,40 @@
+[debug] [2025-01-03T12:23:01.385Z] ----------------------------------------------------------------------
+[debug] [2025-01-03T12:23:01.387Z] Command:       /usr/local/bin/firebase /Users/admin/.cache/firebase/tools/lib/node_modules/firebase-tools/lib/bin/firebase deploy --only firestore:rules
+[debug] [2025-01-03T12:23:01.388Z] CLI Version:   13.10.1
+[debug] [2025-01-03T12:23:01.388Z] Platform:      darwin
+[debug] [2025-01-03T12:23:01.388Z] Node Version:  v18.5.0
+[debug] [2025-01-03T12:23:01.392Z] Time:          Fri Jan 03 2025 20:23:01 GMT+0800 (Malaysia Time)
+[debug] [2025-01-03T12:23:01.392Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-01-03T12:23:01.470Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-01-03T12:23:01.470Z] > authorizing via signed-in user (nurfatihah798@gmail.com)
+[debug] [2025-01-03T12:23:01.470Z] [iam] checking project iloved-92a38 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]
+[debug] [2025-01-03T12:23:01.472Z] > refreshing access token with scopes: []
+[debug] [2025-01-03T12:23:01.474Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2025-01-03T12:23:01.475Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-01-03T12:23:01.788Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2025-01-03T12:23:01.788Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2025-01-03T12:23:01.831Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/iloved-92a38:testIamPermissions [none]
+[debug] [2025-01-03T12:23:01.831Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/iloved-92a38:testIamPermissions x-goog-quota-user=projects/iloved-92a38
+[debug] [2025-01-03T12:23:01.832Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/iloved-92a38:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[debug] [2025-01-03T12:23:03.093Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/iloved-92a38:testIamPermissions 200
+[debug] [2025-01-03T12:23:03.094Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/iloved-92a38:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get"]}
+[info] 
+[info] === Deploying to 'iloved-92a38'...
+[info] 
+[info] i  deploying firestore 
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking firestore.rules for compilation errors... 
+[debug] [2025-01-03T12:23:03.099Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/iloved-92a38:test [none]
+[debug] [2025-01-03T12:23:03.099Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/iloved-92a38:test [omitted]
+[debug] [2025-01-03T12:23:04.202Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/iloved-92a38:test 200
+[debug] [2025-01-03T12:23:04.202Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/iloved-92a38:test {}
+[info] ✔  cloud.firestore: rules file firestore.rules compiled successfully 
+[debug] [2025-01-03T12:23:04.204Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/iloved-92a38/releases pageSize=10&pageToken=
+[debug] [2025-01-03T12:23:40.729Z] *** [apiv2] error from fetch(https://firebaserules.googleapis.com/v1/projects/iloved-92a38/releases?pageSize=10&pageToken=, {"headers":{},"method":"GET"}): FetchError: request to https://firebaserules.googleapis.com/v1/projects/iloved-92a38/releases?pageSize=10&pageToken= failed, reason: connect ETIMEDOUT 2404:6800:4001:802::200a:443
+[debug] [2025-01-03T12:23:45.736Z] Error: Timed out.
+    at Timeout._onTimeout (/Users/admin/.cache/firebase/tools/lib/node_modules/firebase-tools/lib/utils.js:267:49)
+    at listOnTimeout (node:internal/timers:564:17)
+    at process.processTimers (node:internal/timers:507:7)
+[error] 
+[error] Error: An unexpected error has occurred.
