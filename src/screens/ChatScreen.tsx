@@ -124,7 +124,7 @@ const ChatScreen: React.FC<{ route: any; navigation: any }> = ({
       setMessages(fetchedMessages);
   
       // Log the final array of fetched messages
-      console.log('Fetched Messages:', fetchedMessages);
+      console.log('Fetched Messsages:', fetchedMessages);
     });
   
     return () => unsubscribe();
