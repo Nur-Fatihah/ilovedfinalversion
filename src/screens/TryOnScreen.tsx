@@ -2,31 +2,63 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   SafeAreaView,
   Image,
   Alert,
   ScrollView,
-  ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { db } from '../../firebase-config';
 import { doc, getDoc } from 'firebase/firestore';
+import tw from 'twrnc';
+import axios from 'axios';
+import { encode } from 'base64-arraybuffer';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+
+const REMOVE_BG_API_KEY = 'hRoP4a4HTRfNmvgKobyYoRgn'; // Replace with your actual API key
 
 const TryOnScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { productId } = route.params;
   const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
   const [productImage, setProductImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null); // New state for the original image
   const [loading, setLoading] = useState(true);
 
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const baseTranslateX = useSharedValue(0); // Base X position
+  const baseTranslateY = useSharedValue(0); // Base Y position
+  const scale = useSharedValue(1); // Current scale
+  const baseScale = useSharedValue(1); // Base scale to maintain after resizing
+  const rotation = useSharedValue(0); // Rotation for the loading animation
+  const pulseScale = useSharedValue(1); // Scale for the loading animation
+
   const fetchProductImage = async () => {
+    setLoading(true);
     try {
       const productRef = doc(db, 'products', productId);
       const productSnap = await getDoc(productRef);
 
       if (productSnap.exists()) {
-        setProductImage(productSnap.data().images?.[0] || null);
+        const image = productSnap.data().images?.[0] || null;
+
+        if (image) {
+          setOriginalImage(image); // Set the original image before processing
+          const bgRemovedImage = await removeBackground(image);
+          setProductImage(bgRemovedImage);
+        } else {
+          setProductImage(null);
+        }
       } else {
         Alert.alert('Error', 'Product not found.');
       }
@@ -38,8 +70,48 @@ const TryOnScreen = ({ route, navigation }: { route: any; navigation: any }) => 
     }
   };
 
+  const removeBackground = async (imageUrl: string): Promise<string | null> => {
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        'https://api.remove.bg/v1.0/removebg',
+        {
+          image_url: imageUrl,
+        },
+        {
+          headers: {
+            'X-Api-Key': REMOVE_BG_API_KEY,
+          },
+          responseType: 'arraybuffer', // Ensure binary data is returned
+        }
+      );
+
+      if (response.status === 200) {
+        const base64Image = `data:image/png;base64,${encode(response.data)}`;
+        return base64Image;
+      } else {
+        Alert.alert('Error', 'Failed to remove background.');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error removing background:', error);
+      Alert.alert('Error', 'Failed to remove background from image.');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProductImage();
+
+    // Start loading animation
+    rotation.value = withRepeat(withTiming(360, { duration: 2000, easing: Easing.linear }), -1);
+    pulseScale.value = withRepeat(
+      withTiming(1.1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
   }, [productId]);
 
   const handleUploadPhoto = async () => {
@@ -59,176 +131,116 @@ const TryOnScreen = ({ route, navigation }: { route: any; navigation: any }) => 
     }
   };
 
-  const handleTryOn = () => {
-    if (!uploadedPhoto) {
-      Alert.alert('Error', 'Please upload a full-body photo before trying on the product.');
-      return;
-    }
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = baseTranslateX.value + event.translationX;
+      translateY.value = baseTranslateY.value + event.translationY;
+    })
+    .onEnd(() => {
+      baseTranslateX.value = translateX.value;
+      baseTranslateY.value = translateY.value;
+    });
 
-    Alert.alert(
-      'Try-On Feature',
-      'This is where the Try-On experience would be implemented.',
-      [{ text: 'OK' }]
-    );
-  };
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      scale.value = baseScale.value * event.scale;
+    })
+    .onEnd(() => {
+      baseScale.value = scale.value;
+    });
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#c2185b" />
-      </View>
-    );
-  }
+  const composedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  const loadingImageStyle = useAnimatedStyle(() => ({
+    transform: [
+      { rotate: `${rotation.value}deg` },
+      { scale: pulseScale.value },
+    ],
+  }));
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Back</Text>
+    <SafeAreaView style={tw`flex-1 bg-gray-100`}>
+      <View style={tw`p-5 bg-pink-200 flex-row items-center justify-between`}>
+        <TouchableOpacity style={tw`mr-4`} onPress={() => navigation.goBack()}>
+          <Text style={tw`text-lg text-pink-800`}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>Virtual Try-On</Text>
+        <Text style={tw`text-lg text-pink-800`}>Virtual Try-On</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.subtitle}>
-          Try-On feature for Product ID: <Text style={styles.productId}>{productId}</Text>
-        </Text>
-
-        {productImage ? (
-          <Image source={{ uri: productImage }} style={styles.productImage} />
-        ) : (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>No product image available</Text>
-          </View>
-        )}
-
-        <Text style={styles.text}>
-          Upload a full-body photo to explore the Try-On experience for the selected product.
-        </Text>
-
+      <ScrollView contentContainerStyle={tw`p-5 items-center`}>
         {uploadedPhoto ? (
-          <Image source={{ uri: uploadedPhoto }} style={styles.uploadedPhoto} />
+          <Image source={{ uri: uploadedPhoto }} style={tw`w-72 h-72 rounded-lg mb-5`} />
         ) : (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>No photo uploaded</Text>
+          <View style={tw`w-72 h-72 bg-gray-300 justify-center items-center rounded-lg mb-5`}>
+            <Text style={tw`text-gray-500 text-lg`}>No photo uploaded</Text>
           </View>
         )}
 
-        <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPhoto}>
-          <Text style={styles.buttonText}>
+        <TouchableOpacity
+          style={tw`bg-blue-500 p-4 rounded-lg items-center mb-5`}
+          onPress={handleUploadPhoto}
+        >
+          <Text style={tw`text-white font-bold text-lg`}>
             {uploadedPhoto ? 'Change Photo' : 'Upload Photo'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tryNowButton, !uploadedPhoto && styles.disabledButton]}
-          onPress={handleTryOn}
-          disabled={!uploadedPhoto}
-        >
-          <Text style={styles.buttonText}>Try On</Text>
-        </TouchableOpacity>
+        {productImage && (
+          <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[animatedStyle, tw`w-72 h-72 mb-5`]}>
+              <Image
+                source={{ uri: productImage }}
+                style={tw`w-full h-full rounded-lg`}
+                resizeMode="contain"
+              />
+            </Animated.View>
+          </GestureDetector>
+        )}
       </ScrollView>
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          {originalImage ? (
+            <Animated.Image
+              source={{ uri: originalImage || undefined }}
+              style={[tw`w-48 h-48 rounded-full`, loadingImageStyle]}
+            />
+          ) : (
+            <Animated.View style={[tw`w-48 h-48 bg-gray-300 rounded-full`, loadingImageStyle]} />
+          )}
+          <Text style={styles.loadingText}>Analyzing Image...</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
 
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-  },
-  header: {
-    padding: 20,
-    backgroundColor: '#ffeef2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#c2185b',
-    fontWeight: 'bold',
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#c2185b',
-  },
-  content: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  productId: {
-    fontWeight: 'bold',
-    color: '#555',
-  },
-  text: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  productImage: {
-    width: 300,
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  placeholder: {
-    width: 300,
-    height: 300,
-    backgroundColor: '#e9e9e9',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
-    marginBottom: 20,
+    zIndex: 10,
   },
-  placeholderText: {
-    color: '#999',
-    fontSize: 16,
-  },
-  uploadedPhoto: {
-    width: 300,
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  uploadButton: {
-    backgroundColor: '#3498db',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  tryNowButton: {
-    backgroundColor: '#28a745',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
+  loadingText: {
+    marginTop: 10,
     color: '#fff',
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
-  },
-  disabledButton: {
-    backgroundColor: '#ccc',
   },
 });
 
