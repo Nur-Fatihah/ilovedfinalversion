@@ -143,50 +143,14 @@ const SellerDashboardScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#f9f9f9',
-  },
-  header: {
-    backgroundColor: '#ffeef2',
-    padding: 20,
-    alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  logo: {
-    width: 60,
-    height: 60,
-    marginBottom: 10,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#c2185b',
-  },
-  subtitle: {
-    paddingHorizontal: 20,
-    marginVertical: 10,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  loader: {
-    marginTop: 20,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
+  screen: { flex: 1, backgroundColor: '#f9f9f9' },
+  header: { backgroundColor: '#ffeef2', padding: 20, alignItems: 'center' },
+  logo: { width: 60, height: 60, marginBottom: 10 },
+  headerText: { fontSize: 20, fontWeight: 'bold', color: '#c2185b' },
+  subtitle: { paddingHorizontal: 20, marginVertical: 10, fontSize: 18, fontWeight: 'bold' },
+  loader: { marginTop: 20 },
+  listContent: { paddingHorizontal: 20, paddingBottom: 20 },
+  row: { justifyContent: 'space-between', marginBottom: 15 },
   productCard: {
     backgroundColor: '#fff',
     borderRadius: 15,
@@ -199,91 +163,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  productImage: {
-    width: '100%',
-    height: 120,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
-  productDetails: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-    textAlign: 'center',
-  },
-  productPrice: {
-    fontSize: 14,
-    color: 'green',
-  },
-  outOfStockBadge: {
-    marginTop: 5,
-    fontSize: 12,
-    color: '#e74c3c',
-    fontWeight: 'bold',
-  },
-  productStock: {
-    fontSize: 14,
-    color: '#555',
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  editButton: {
-    backgroundColor: '#3498db',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-  },
-  editButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  deleteButton: {
-    backgroundColor: '#e74c3c',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-  },
-  deleteButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 12,
-  },
-  emptyContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#888',
-    textAlign: 'center',
-  },
-  addButtonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-  },
-  addButton: {
-    backgroundColor: '#c2185b',
-    padding: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
+  productImage: { width: '100%', height: 120, borderRadius: 10, marginBottom: 10 },
+  productDetails: { alignItems: 'center', marginBottom: 10 },
+  productName: { fontSize: 16, fontWeight: 'bold', color: '#333', textAlign: 'center' },
+  productPrice: { fontSize: 14, color: 'green' },
+  outOfStockBadge: { marginTop: 5, fontSize: 12, color: '#e74c3c', fontWeight: 'bold' },
+  productStock: { fontSize: 14, color: '#555' },
+  buttonGroup: { flexDirection: 'row', justifyContent: 'space-between', width: '100%' },
+  editButton: { backgroundColor: '#3498db', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 5 },
+  editButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  deleteButton: { backgroundColor: '#e74c3c', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 5 },
+  deleteButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
+  emptyContainer: { alignItems: 'center', marginTop: 20 },
+  emptyText: { fontSize: 16, color: '#888', textAlign: 'center' },
+  addButtonContainer: { position: 'absolute', bottom: 20, left: 20, right: 20 },
+  addButton: { backgroundColor: '#c2185b', padding: 15, borderRadius: 15, alignItems: 'center' },
+  addButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
 });
 
 export default SellerDashboardScreen;

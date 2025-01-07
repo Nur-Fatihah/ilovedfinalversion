@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Image,
 } from 'react-native';
 import { db, saveDocument } from '../../firebase-config';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
@@ -80,7 +80,7 @@ const ProductDetailScreen = ({ route, navigation }: { route: any; navigation: an
         productId,
         name: product?.name || 'Unnamed Product',
         price: product?.price || 'N/A',
-        imageUrl: product?.imageUrl || '',
+        imageUrl: product?.images?.[0] || '',
         addedAt: new Date(),
       };
 
@@ -130,10 +130,20 @@ const ProductDetailScreen = ({ route, navigation }: { route: any; navigation: an
         <ActivityIndicator size="large" color="#c2185b" style={styles.loader} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Image
-            source={{ uri: product?.imageUrl || 'https://via.placeholder.com/150' }}
-            style={styles.productImage}
-          />
+          {/* Horizontal ScrollView for multiple images */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageCarousel}>
+  {(product?.images || [product?.imageUrl])?.map((imageUri: string, index: number) => (
+    imageUri && (
+      <Image
+        key={index}
+        source={{ uri: imageUri }}
+        style={styles.productImage}
+      />
+    )
+  ))}
+</ScrollView>
+
+
           <View style={styles.details}>
             <Text style={styles.title}>{product?.name || 'Unnamed Product'}</Text>
             <Text style={styles.price}>RM {product?.price || 'N/A'}</Text>
@@ -196,11 +206,14 @@ const styles = StyleSheet.create({
     color: '#c2185b',
     fontWeight: 'bold',
   },
+  imageCarousel: {
+    marginBottom: 20,
+  },
   productImage: {
     width: width - 40,
     height: 250,
     borderRadius: 15,
-    marginBottom: 20,
+    marginRight: 10,
   },
   details: { marginBottom: 20 },
   title: { fontSize: 24, fontWeight: 'bold', color: '#c2185b', marginBottom: 10 },

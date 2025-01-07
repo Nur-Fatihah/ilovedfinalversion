@@ -65,6 +65,7 @@ const ReportScreen = ({ route, navigation }: { route: any; navigation: any }) =>
         details,
         createdAt: serverTimestamp(),
         status: 'pending',
+        productImage: product?.images?.[0] || product?.imageUrl || '', // Include image
       });
       Alert.alert('Success', 'Report submitted successfully.');
       navigation.goBack();
@@ -86,10 +87,22 @@ const ReportScreen = ({ route, navigation }: { route: any; navigation: any }) =>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {product ? (
           <>
-            <Image
-              source={{ uri: product.imageUrl || 'https://via.placeholder.com/150' }}
-              style={styles.productImage}
-            />
+            {/* Horizontal ScrollView for product images */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageCarousel}>
+              {product.images?.map((imageUri: string, index: number) => (
+                <Image
+                  key={index}
+                  source={{ uri: imageUri }}
+                  style={styles.productImage}
+                />
+              )) || (
+                <Image
+                  source={{ uri: product.imageUrl || 'https://via.placeholder.com/150' }}
+                  style={styles.productImage}
+                />
+              )}
+            </ScrollView>
+
             <Text style={styles.productName}>{product.name || 'Unnamed Product'}</Text>
           </>
         ) : (
@@ -147,11 +160,14 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
   },
+  imageCarousel: {
+    marginBottom: 20,
+  },
   productImage: {
-    width: '100%',
+    width: 300,
     height: 200,
     borderRadius: 10,
-    marginBottom: 20,
+    marginRight: 10,
   },
   productName: {
     fontSize: 22,
