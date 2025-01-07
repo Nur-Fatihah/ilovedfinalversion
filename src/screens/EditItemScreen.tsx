@@ -20,6 +20,8 @@ const EditItemScreen = ({ route, navigation }: { route: any; navigation: any }) 
   const [itemDescription, setItemDescription] = useState(product.description);
   const [stock, setStock] = useState(product.stock.toString());
   const [imageUri, setImageUri] = useState(product.imageUrl || '');
+  const [category, setCategory] = useState(product.category || '');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
 
   const handlePickImage = async () => {
     try {
@@ -39,7 +41,7 @@ const EditItemScreen = ({ route, navigation }: { route: any; navigation: any }) 
   };
 
   const validateInputs = () => {
-    if (!itemName.trim() || !itemPrice.trim() || !itemDescription.trim() || !stock.trim()) {
+    if (!itemName.trim() || !itemPrice.trim() || !itemDescription.trim() || !stock.trim() || !category) {
       Alert.alert('Error', 'Please fill in all fields.');
       return false;
     }
@@ -71,6 +73,7 @@ const EditItemScreen = ({ route, navigation }: { route: any; navigation: any }) 
         price: parseFloat(itemPrice),
         description: itemDescription,
         stock: parseInt(stock, 10),
+        category,
         imageUrl: updatedImageUrl,
       };
 
@@ -106,6 +109,23 @@ const EditItemScreen = ({ route, navigation }: { route: any; navigation: any }) 
       { cancelable: false }
     );
   };
+
+  const renderCategoryDropdown = () => (
+    <View style={styles.dropdown}>
+      {['Clothing', 'Footwear','Headwear', 'Accessories', 'Beauty','Electronics', 'Furniture', 'Books', 'Foods', 'Others'].map((cat) => (
+        <TouchableOpacity
+          key={cat}
+          style={styles.dropdownItem}
+          onPress={() => {
+            setCategory(cat);
+            setShowCategoryDropdown(false);
+          }}
+        >
+          <Text style={styles.dropdownText}>{cat}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#ffeef2' }}>
@@ -147,6 +167,16 @@ const EditItemScreen = ({ route, navigation }: { route: any; navigation: any }) 
           onChangeText={setStock}
         />
 
+        <TouchableOpacity
+          style={styles.dropdownToggle}
+          onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
+        >
+          <Text style={styles.dropdownToggleText}>
+            {category || 'Select Category'}
+          </Text>
+        </TouchableOpacity>
+        {showCategoryDropdown && renderCategoryDropdown()}
+
         <TouchableOpacity style={styles.photoPicker} onPress={handlePickImage}>
           <Text style={styles.photoPickerText}>
             {imageUri ? 'Change Product Image' : 'Add Product Image'}
@@ -176,6 +206,11 @@ const styles = StyleSheet.create({
   headerText: { fontSize: 24, fontWeight: 'bold', color: '#c2185b', marginBottom: 20, textAlign: 'center' },
   input: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginVertical: 10 },
   descriptionInput: { textAlignVertical: 'top' },
+  dropdownToggle: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginVertical: 10 },
+  dropdownToggleText: { color: '#555' },
+  dropdown: { backgroundColor: '#fff', borderRadius: 10, marginBottom: 10 },
+  dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#ccc' },
+  dropdownText: { color: '#333' },
   photoPicker: { backgroundColor: '#c2185b', padding: 15, borderRadius: 10, marginVertical: 15 },
   photoPickerText: { color: '#fff', fontWeight: 'bold', textAlign: 'center' },
   imagePreview: { width: '100%', height: 200, borderRadius: 10, marginBottom: 15 },

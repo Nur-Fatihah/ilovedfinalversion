@@ -11,8 +11,9 @@ import {
   SafeAreaView,
   Image,
   StyleSheet,
+  Modal,
+  FlatList,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // Updated import
 import * as ImagePicker from 'expo-image-picker';
 import { saveDocument, uploadImage } from '../../firebase-config';
 import { useAuthContext } from '../context/AuthContext';
@@ -23,9 +24,11 @@ const AddItemScreen = ({ navigation }: { navigation: any }) => {
   const [itemPrice, setItemPrice] = useState('');
   const [itemDescription, setItemDescription] = useState('');
   const [stock, setStock] = useState('');
-  const [category, setCategory] = useState(''); // New state for category
+  const [category, setCategory] = useState(''); // Category state
   const [images, setImages] = useState<string[]>([]);
   const [validationError, setValidationError] = useState('');
+  const [isModalVisible, setIsModalVisible] = useState(false); // Modal state
+  const categories = ['Clothing', 'Footwear','Headwear', 'Accessories', 'Beauty','Electronics', 'Furniture', 'Books', 'Foods', 'Others']; // Categories list
 
   const handlePickImages = async () => {
     try {
@@ -47,7 +50,14 @@ const AddItemScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const validateInputs = () => {
-    if (!itemName.trim() || !itemPrice.trim() || !itemDescription.trim() || !category || images.length === 0 || !stock) {
+    if (
+      !itemName.trim() ||
+      !itemPrice.trim() ||
+      !itemDescription.trim() ||
+      !category ||
+      images.length === 0 ||
+      !stock
+    ) {
       setValidationError('Please fill in all fields and add at least one photo.');
       return false;
     }
@@ -149,21 +159,37 @@ const AddItemScreen = ({ navigation }: { navigation: any }) => {
 
           <View style={styles.card}>
             <Text style={styles.label}>Category</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={category}
-                onValueChange={(value) => setCategory(value)}
-                style={styles.picker}
-              >
-                <Picker.Item label="Select Category" value="" />
-                <Picker.Item label="Clothing" value="clothing" />
-                <Picker.Item label="Electronics" value="electronics" />
-                <Picker.Item label="Furniture" value="furniture" />
-                <Picker.Item label="Books" value="books" />
-                <Picker.Item label="Accessories" value="accessories" />
-              </Picker>
-            </View>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setIsModalVisible(true)}
+            >
+              <Text style={styles.dropdownText}>
+                {category || 'Select Category'}
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          <Modal visible={isModalVisible} transparent={true} animationType="slide">
+            <View style={styles.modalContainer}>
+              <View style={styles.modalContent}>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setCategory(item);
+                        setIsModalVisible(false);
+                      }}
+                    >
+                      <Text style={styles.modalItemText}>{item}</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </Modal>
 
           <View style={styles.card}>
             <Text style={styles.label}>Stock Quantity</Text>
@@ -199,7 +225,7 @@ const AddItemScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f9f9fa' },
+  safeArea: { flex: 1, backgroundColor: '#f8f9fa' },
   container: { flexGrow: 1, paddingHorizontal: 20, paddingVertical: 20 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backText: { color: '#c2185b', fontSize: 24, marginRight: 15, fontWeight: 'bold' },
@@ -207,9 +233,33 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', padding: 15, borderRadius: 15, marginVertical: 10 },
   label: { fontSize: 16, fontWeight: 'bold', marginBottom: 5 },
   input: { padding: 15, borderRadius: 10, borderColor: '#ccc', borderWidth: 1 },
-  pickerContainer: { borderWidth: 1, borderColor: '#ccc', borderRadius: 10 },
-  picker: { height: 50, width: '100%' },
   descriptionInput: { textAlignVertical: 'top' },
+  dropdown: {
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  dropdownText: { fontSize: 16, color: '#555' },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    borderRadius: 10,
+    padding: 20,
+  },
+  modalItem: {
+    paddingVertical: 10,
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
   photoPicker: { backgroundColor: '#c2185b', padding: 15, borderRadius: 15, marginVertical: 15 },
   photoPickerText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
   imagePreview: { width: 100, height: 100, borderRadius: 10, marginHorizontal: 5 },

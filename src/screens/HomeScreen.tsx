@@ -24,6 +24,9 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  const categories = ['All', 'Clothing', 'Footwear', 'Headwear', 'Accessories', 'Beauty', 'Electronics', 'Furniture', 'Books', 'Foods', 'Others'];
 
   const fetchProducts = async () => {
     try {
@@ -61,14 +64,28 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
 
   const handleSearch = (text: string) => {
     setSearchText(text);
-    if (text === '') {
-      setFilteredProducts(products);
-    } else {
-      const filtered = products.filter((product) =>
+    filterProducts(text, selectedCategory);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    filterProducts(searchText, category);
+  };
+
+  const filterProducts = (text: string, category: string) => {
+    let filtered = products;
+
+    if (text) {
+      filtered = filtered.filter((product) =>
         product.name?.toLowerCase().includes(text.toLowerCase())
       );
-      setFilteredProducts(filtered);
     }
+
+    if (category && category !== 'All') {
+      filtered = filtered.filter((product) => product.category === category);
+    }
+
+    setFilteredProducts(filtered);
   };
 
   const renderProduct = ({ item }: { item: any }) => (
@@ -77,11 +94,12 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
       onPress={() => navigation.navigate('ProductDetailScreen', { productId: item.id })}
     >
       <Image
-        source={{ uri: item.imageUrl || 'https://via.placeholder.com/150' }}
+        source={{ uri: item.images?.[0] || 'https://via.placeholder.com/150' }} // Use the first image in the array
         style={styles.productImage}
       />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name || 'Unnamed Product'}</Text>
+        <Text style={styles.productCategory}>{item.category || 'Uncategorized'}</Text>
         <Text style={styles.productPrice}>RM {item.price || 'N/A'}</Text>
       </View>
     </TouchableOpacity>
@@ -99,6 +117,27 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
           onChangeText={handleSearch}
           placeholderTextColor="#888"
         />
+        <View style={styles.categoryContainer}>
+          {categories.map((category) => (
+            <TouchableOpacity
+              key={category}
+              style={[
+                styles.categoryButton,
+                selectedCategory === category && styles.categoryButtonSelected,
+              ]}
+              onPress={() => handleCategoryChange(category)}
+            >
+              <Text
+                style={[
+                  styles.categoryText,
+                  selectedCategory === category && styles.categoryTextSelected,
+                ]}
+              >
+                {category}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <View style={styles.productContainer}>
@@ -166,6 +205,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 15,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  categoryButton: {
+    padding: 10,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    margin: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  categoryButtonSelected: {
+    backgroundColor: '#c2185b',
+  },
+  categoryText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  categoryTextSelected: {
+    color: '#fff',
   },
   productContainer: {
     flex: 1,
@@ -203,6 +267,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',
+    marginBottom: 5,
+  },
+  productCategory: {
+    fontSize: 12,
+    color: '#888',
     marginBottom: 5,
   },
   productPrice: {
