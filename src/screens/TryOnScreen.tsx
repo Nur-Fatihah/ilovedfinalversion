@@ -1,43 +1,133 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Image } from 'react-native';
-import { StackScreenProps } from '@react-navigation/stack';
-import { RootStackParamList } from '../types/navigation';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  Image,
+  Alert,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { db } from '../../firebase-config';
+import { doc, getDoc } from 'firebase/firestore';
 
-type TryOnScreenProps = StackScreenProps<RootStackParamList, 'TryOnScreen'>;
-
-const TryOnScreen: React.FC<TryOnScreenProps> = ({ route, navigation }) => {
+const TryOnScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { productId } = route.params;
+  const [uploadedPhoto, setUploadedPhoto] = useState<string | null>(null);
+  const [productImage, setProductImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleBack = () => {
-    navigation.goBack();
+  const fetchProductImage = async () => {
+    try {
+      const productRef = doc(db, 'products', productId);
+      const productSnap = await getDoc(productRef);
+
+      if (productSnap.exists()) {
+        setProductImage(productSnap.data().images?.[0] || null);
+      } else {
+        Alert.alert('Error', 'Product not found.');
+      }
+    } catch (error) {
+      console.error('Error fetching product image:', error);
+      Alert.alert('Error', 'Failed to fetch product details.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchProductImage();
+  }, [productId]);
+
+  const handleUploadPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setUploadedPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      Alert.alert('Error', 'Failed to upload the photo. Please try again.');
+    }
+  };
+
+  const handleTryOn = () => {
+    if (!uploadedPhoto) {
+      Alert.alert('Error', 'Please upload a full-body photo before trying on the product.');
+      return;
+    }
+
+    Alert.alert(
+      'Try-On Feature',
+      'This is where the Try-On experience would be implemented.',
+      [{ text: 'OK' }]
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#c2185b" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerText}>Virtual Try-On</Text>
       </View>
 
-      <View style={styles.content}>
-        <Image
-          source={{ uri: 'https://via.placeholder.com/300x300' }} // Placeholder for product/AR model
-          style={styles.image}
-        />
+      <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>
           Try-On feature for Product ID: <Text style={styles.productId}>{productId}</Text>
         </Text>
+
+        {productImage ? (
+          <Image source={{ uri: productImage }} style={styles.productImage} />
+        ) : (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No product image available</Text>
+          </View>
+        )}
+
         <Text style={styles.text}>
-          Explore the virtual try-on experience. This screen will showcase AR or 3D functionality
-          for the selected product.
+          Upload a full-body photo to explore the Try-On experience for the selected product.
         </Text>
 
-        <TouchableOpacity style={styles.tryNowButton}>
-          <Text style={styles.buttonText}>Try Now</Text>
+        {uploadedPhoto ? (
+          <Image source={{ uri: uploadedPhoto }} style={styles.uploadedPhoto} />
+        ) : (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No photo uploaded</Text>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.uploadButton} onPress={handleUploadPhoto}>
+          <Text style={styles.buttonText}>
+            {uploadedPhoto ? 'Change Photo' : 'Upload Photo'}
+          </Text>
         </TouchableOpacity>
-      </View>
+
+        <TouchableOpacity
+          style={[styles.tryNowButton, !uploadedPhoto && styles.disabledButton]}
+          onPress={handleTryOn}
+          disabled={!uploadedPhoto}
+        >
+          <Text style={styles.buttonText}>Try On</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -74,16 +164,8 @@ const styles = StyleSheet.create({
     color: '#c2185b',
   },
   content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
-  },
-  image: {
-    width: 300,
-    height: 300,
-    borderRadius: 10,
-    marginBottom: 20,
+    alignItems: 'center',
   },
   subtitle: {
     fontSize: 16,
@@ -102,6 +184,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
   },
+  productImage: {
+    width: 300,
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  placeholder: {
+    width: 300,
+    height: 300,
+    backgroundColor: '#e9e9e9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  placeholderText: {
+    color: '#999',
+    fontSize: 16,
+  },
+  uploadedPhoto: {
+    width: 300,
+    height: 300,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  uploadButton: {
+    backgroundColor: '#3498db',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   tryNowButton: {
     backgroundColor: '#28a745',
     padding: 15,
@@ -112,6 +226,9 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
   },
 });
 
