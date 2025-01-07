@@ -5,29 +5,33 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import {
   collection,
-  addDoc,
-  onSnapshot,
-  serverTimestamp,
-  query,
-  orderBy,
   doc,
   getDoc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+  onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../../firebase-config';
 import { useAuthContext } from '../context/AuthContext';
+import tw from 'twrnc';
 
+// Define a type for the Message object
 interface Message {
-  id: string;
   senderId: string;
   text: string;
-  createdAt: any;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
 }
 
 const ChatScreen: React.FC<{ route: any; navigation: any }> = ({
@@ -37,18 +41,25 @@ const ChatScreen: React.FC<{ route: any; navigation: any }> = ({
   const { conversationId, recipient } = route.params;
   const { user } = useAuthContext();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState<string>('');
-  const [recipientName, setRecipientName] = useState<string>('Seller');
+  const [newMessage, setNewMessage] = useState('');
+  const [recipientName, setRecipientName] = useState('Seller');
+  const [loading, setLoading] = useState(false);
 
+  // Fetch recipient name
   useEffect(() => {
-    // Fetch recipient's name
     const fetchRecipientName = async () => {
       try {
-        const recipientRef = doc(db, 'users', recipient);
-        const recipientSnap = await getDoc(recipientRef);
-        if (recipientSnap.exists()) {
-          const data = recipientSnap.data();
+        const recipientQuery = query(
+          collection(db, 'users'),
+          where('email', '==', recipient)
+        );
+        const recipientSnap = await getDocs(recipientQuery);
+
+        if (!recipientSnap.empty) {
+          const data = recipientSnap.docs[0].data();
           setRecipientName(data.name || 'Seller');
+        } else {
+          setRecipientName('Seller');
         }
       } catch (error) {
         console.error('Error fetching recipient name:', error);
@@ -58,133 +69,147 @@ const ChatScreen: React.FC<{ route: any; navigation: any }> = ({
     fetchRecipientName();
   }, [recipient]);
 
+  // Fetch messages from Firestore
   useEffect(() => {
-    if (!conversationId) return;
+    const fetchMessages = async () => {
+      try {
+        const conversationRef = doc(db, 'messages', conversationId);
+        const conversationSnap = await getDoc(conversationRef);
 
-    const messagesQuery = query(
-      collection(db, `messages/${conversationId}/messages`),
-      orderBy('createdAt', 'asc')
+        if (conversationSnap.exists()) {
+          const data = conversationSnap.data();
+          setMessages(data.convert || []);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+
+    fetchMessages();
+
+    const unsubscribe = onSnapshot(
+      doc(db, 'messages', conversationId),
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setMessages(data.convert || []);
+        }
+      }
     );
-
-    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-      const fetchedMessages = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Message[];
-
-      setMessages(fetchedMessages);
-    });
 
     return () => unsubscribe();
   }, [conversationId]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-
-    await addDoc(collection(db, `messages/${conversationId}/messages`), {
-      senderId: user?.email,
+  
+    setLoading(true);
+  
+    const newMessageData: Message = {
+      senderId: user?.email || '',
       text: newMessage.trim(),
-      createdAt: serverTimestamp(),
-    });
+      createdAt: {
+        seconds: Math.floor(new Date().getTime() / 1000),
+        nanoseconds: 0,
+      },
+    };
+  
+    try {
+      const conversationRef = doc(db, 'messages', conversationId);
+      const conversationSnap = await getDoc(conversationRef);
+  
+      if (conversationSnap.exists()) {
+        const currentData = conversationSnap.data();
+        const updatedMessages = [...(currentData.convert || []), newMessageData];
+  
+        // Update Firestore with the new message
+        await updateDoc(conversationRef, {
+          convert: updatedMessages,
+          lastMessage: newMessage.trim(),
+        });
+  
+        // Clear the textbox
+        setNewMessage('');
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const renderMessage = ({ item }: { item: Message }) => {
+    const formattedDate = item.createdAt
+      ? new Date(item.createdAt.seconds * 1000).toLocaleString()
+      : 'Unknown time';
 
-    setNewMessage('');
+    const isCurrentUser = item.senderId === user?.email;
+
+    return (
+      <View
+        style={[
+          tw`p-3 rounded-lg my-2 max-w-3/4`,
+          isCurrentUser ? tw`bg-pink-100 self-end` : tw`bg-gray-200 self-start`,
+        ]}
+      >
+        <Text style={tw`text-gray-800 text-sm`}>{item.text}</Text>
+        <Text style={tw`text-gray-500 text-xs`}>{formattedDate}</Text>
+      </View>
+    );
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View
-      style={[
-        styles.message,
-        item.senderId === user?.email ? styles.myMessage : styles.otherMessage,
-      ]}
-    >
-      <Text style={styles.messageText}>{item.text}</Text>
-    </View>
-  );
-
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView style={tw`flex-1 bg-gray-100`}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={tw`flex-1`}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
+        {/* Header */}
+        <View style={tw`bg-pink-100 p-5 flex-row items-center shadow-md`}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>←</Text>
+            <Text style={tw`text-pink-700 text-lg mr-2`}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerText}>{recipientName}</Text>
+          <Text style={tw`text-pink-700 text-lg font-bold`}>{recipientName}</Text>
         </View>
+
+        {/* Messages */}
         <FlatList
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(_, index) => index.toString()}
           renderItem={renderMessage}
-          contentContainerStyle={styles.chatContainer}
+          contentContainerStyle={tw`p-2`}
+          ListEmptyComponent={
+            <Text style={tw`text-center text-gray-500`}>No messages yet</Text>
+          }
         />
-        <View style={styles.inputContainer}>
+
+        {/* Input */}
+        <View style={tw`flex-row items-center p-3 border-t border-gray-300 bg-white`}>
           <TextInput
-            style={styles.input}
+            style={tw`flex-1 p-3 rounded-full bg-gray-200 text-sm text-gray-800`}
             value={newMessage}
             onChangeText={setNewMessage}
             placeholder="Type a message..."
             placeholderTextColor="#888"
+            editable={!loading}
           />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-            <Text style={styles.sendButtonText}>Send</Text>
+          <TouchableOpacity
+            style={tw`ml-3 p-3 rounded-full ${
+              loading ? 'bg-gray-400' : 'bg-pink-700'
+            }`}
+            onPress={handleSendMessage}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text style={tw`text-white text-sm font-bold`}>Send</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f9f9f9' },
-  header: {
-    backgroundColor: '#ffeef2',
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  backText: { fontSize: 18, color: '#c2185b', marginRight: 10 },
-  headerText: { fontSize: 18, fontWeight: 'bold', color: '#c2185b' },
-  container: { flex: 1 },
-  chatContainer: { padding: 10 },
-  message: {
-    maxWidth: '75%',
-    padding: 10,
-    borderRadius: 10,
-    marginVertical: 5,
-  },
-  myMessage: { alignSelf: 'flex-end', backgroundColor: '#ffeef2', color: '#fff' },
-  otherMessage: { alignSelf: 'flex-start', backgroundColor: '#f1f1f1' },
-  messageText: { fontSize: 14, color: '#333' },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    backgroundColor: '#fff',
-  },
-  input: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 20,
-    backgroundColor: '#f1f1f1',
-    fontSize: 14,
-    color: '#333',
-  },
-  sendButton: {
-    marginLeft: 10,
-    padding: 10,
-    borderRadius: 20,
-    backgroundColor: '#c2185b',
-  },
-  sendButtonText: { fontSize: 14, color: '#fff', fontWeight: 'bold' },
-});
 
 export default ChatScreen;
