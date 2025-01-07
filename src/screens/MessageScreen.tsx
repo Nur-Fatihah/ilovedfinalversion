@@ -26,7 +26,7 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [userNames, setUserNames] = useState<Record<string, { name: string, profilePicture: string }>>({});
 
   const fetchConversations = async () => {
     if (!user?.email) return;
@@ -49,7 +49,7 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   
       setConversations(userConversations);
   
-      // Fetch names for participants in these conversations
+      // Fetch names and profile pictures for participants in these conversations
       const participantIds = Array.from(
         new Set(
           userConversations.flatMap((conv) => [conv.seller_id, conv.buyer_id])
@@ -66,20 +66,24 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       );
   
       const usersSnapshot = await getDocs(usersQuery);
-      const userMap: Record<string, string> = {};
+      const userMap: Record<string, { name: string, profilePicture: string }> = {};
       console.log('User Snapshot:', usersSnapshot);
       usersSnapshot.forEach((userDoc) => {
         const userData = userDoc.data();
         console.log('Fetched user data:', userData); // Log to check structure
-        if (userData.email && userData.name) { // Ensure you're using the correct field names
-          userMap[userData.email] = userData.name;  // Map by email or userId based on what matches the message fields
+        if (userData.email) { // Ensure you're using the correct field names
+          userMap[userData.email] = {
+            name: userData.name || 'Unknown User',  // Map name
+            profilePicture: userData.profilePicture || 'https://via.placeholder.com/50', // Map profile picture or fallback
+          };
         }
       });
   
-      // Update userNames with the map of user emails to names
-      const nameMap: Record<string, string> = {};
+      // Update userNames with the map of user emails to names and profile pictures
+      const nameMap: Record<string, { name: string, profilePicture: string }> = {};
       participantIds.forEach((id) => {
-        nameMap[id] = userMap[id] || 'Unknown User';
+        const userInfo = userMap[id] || { name: 'Unknown User', profilePicture: 'https://via.placeholder.com/50' };
+        nameMap[id] = userInfo;
       });
   
       setUserNames(nameMap);
@@ -98,7 +102,10 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const otherParticipant =
       item.seller_id === user?.email ? item.buyer_id : item.seller_id;
 
-    const otherParticipantName = userNames[otherParticipant] || 'Fetching...';
+    const otherParticipantInfo = userNames[otherParticipant] || {
+      name: 'Fetching...',
+      profilePicture: 'https://via.placeholder.com/50',
+    };
 
     return (
       <TouchableOpacity
@@ -111,12 +118,12 @@ const MessageScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         }
       >
         <Image
-          source={{ uri: 'https://via.placeholder.com/50' }}
+          source={{ uri: otherParticipantInfo.profilePicture }}
           style={tw`w-12 h-12 rounded-full mr-4`}
         />
         <View style={tw`flex-1`}>
           <Text style={tw`text-base font-bold text-gray-800`}>
-            {otherParticipantName}
+            {otherParticipantInfo.name}
           </Text>
           <Text style={tw`text-sm text-gray-500 mt-1`}>{item.lastMessage}</Text>
         </View>
