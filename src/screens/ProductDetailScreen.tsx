@@ -145,15 +145,19 @@ const ProductDetailScreen = ({ route, navigation }: { route: any; navigation: an
 
 
           <View style={styles.details}>
-            <Text style={styles.title}>{product?.name || 'Unnamed Product'}</Text>
-            <Text style={styles.price}>RM {product?.price || 'N/A'}</Text>
-            <Text style={styles.stock}>
-              {product?.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
-            </Text>
-            <Text style={styles.description}>
-              {product?.description || 'No description available.'}
-            </Text>
-          </View>
+  <Text style={styles.title}>{product?.name || 'Unnamed Product'}</Text>
+  <Text style={styles.price}>RM {product?.price || 'N/A'}</Text>
+  <Text style={styles.stock}>
+    {product?.stock > 0 ? `${product.stock} in stock` : 'Out of Stock'}
+  </Text>
+  <Text style={styles.category}>
+    Category: {product?.category || 'No category specified'}
+  </Text>
+  <Text style={styles.description}>
+    {product?.description || 'No description available.'}
+  </Text>
+</View>
+
 
           {seller && (
             <View style={styles.sellerInfo}>
@@ -219,6 +223,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', color: '#c2185b', marginBottom: 10 },
   price: { fontSize: 20, color: '#2ecc71', marginBottom: 10 },
   stock: { fontSize: 16, color: '#555', marginBottom: 10 },
+  category: {
+  fontSize: 16,
+  color: '#555',
+  marginBottom: 10,
+  fontWeight: 'bold',
+},
   description: { fontSize: 16, color: '#333' },
   sellerInfo: {
     marginVertical: 20,
